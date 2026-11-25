@@ -1,0 +1,71 @@
+using Unity.Netcode;
+using Unity.Netcode.Transports.UTP;
+using UnityEngine;
+
+public class NetworkButtons : MonoBehaviour
+{
+    private string _address = "127.0.0.1";
+    private string _port = "7777";
+
+    private void OnGUI()
+    {
+        var nm = NetworkManager.Singleton;
+        if (nm == null) return;
+
+        GUILayout.BeginArea(new Rect(10, 10, 240, 220));
+
+        if (!nm.IsListening)
+        {
+            GUILayout.BeginHorizontal();
+            GUILayout.Label("IP", GUILayout.Width(30));
+            _address = GUILayout.TextField(_address);
+            GUILayout.EndHorizontal();
+
+            GUILayout.BeginHorizontal();
+            GUILayout.Label("Port", GUILayout.Width(30));
+            _port = GUILayout.TextField(_port);
+            GUILayout.EndHorizontal();
+
+            if (GUILayout.Button("Host (Server + Player)", GUILayout.Height(30)))
+            {
+                ApplyConnectionData(nm, "0.0.0.0");
+                nm.StartHost();
+            }
+            if (GUILayout.Button("Server (Dedicated)", GUILayout.Height(30)))
+            {
+                ApplyConnectionData(nm, "0.0.0.0");
+                nm.StartServer();
+            }
+            if (GUILayout.Button("Client", GUILayout.Height(30)))
+            {
+                ApplyConnectionData(nm, _address);
+                nm.StartClient();
+            }
+        }
+        else
+        {
+            string mode = nm.IsHost ? "Host" : nm.IsServer ? "Server" : "Client";
+            GUILayout.Label($"Mode: {mode}");
+            GUILayout.Label($"Transport: {nm.NetworkConfig.NetworkTransport.GetType().Name}");
+            GUILayout.Label("Esc: カーソル解除 / 再ロック");
+
+            if (GUILayout.Button("Shutdown", GUILayout.Height(30)))
+            {
+                nm.Shutdown();
+            }
+        }
+
+        GUILayout.EndArea();
+    }
+
+    private void ApplyConnectionData(NetworkManager nm, string address)
+    {
+        var transport = nm.GetComponent<UnityTransport>();
+        if (transport == null) return;
+
+        if (!ushort.TryParse(_port, out ushort port)) port = 7777;
+
+        // 第3引数はサーバー側の待受アドレス。Host/Serverでは0.0.0.0で全NICから受け付ける
+        transport.SetConnectionData(address, port, "0.0.0.0");
+    }
+}
